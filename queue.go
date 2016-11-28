@@ -12,7 +12,7 @@ type ringBuffer struct {
 type Queue struct {
 	content *ringBuffer
 	len     int
-	lock    sync.RWMutex
+	lock    sync.Mutex
 }
 
 func New(initialSize int) *Queue {
@@ -57,9 +57,9 @@ func (q *Queue) Push(item interface{}) {
 }
 
 func (q *Queue) Length() int {
-	q.lock.RLock()
+	q.lock.Lock()
 	len := q.len
-	q.lock.RUnlock()
+	q.lock.Unlock()
 	return len
 }
 
