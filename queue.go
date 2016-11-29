@@ -12,7 +12,7 @@ type ringBuffer struct {
 type Queue struct {
 	content *ringBuffer
 	len     int
-	lock    sync.RWMutex
+	lock    sync.Mutex
 }
 
 func New(initialSize int) *Queue {
@@ -29,7 +29,6 @@ func New(initialSize int) *Queue {
 
 func (q *Queue) Push(item interface{}) {
 	q.lock.Lock()
-	defer q.lock.Unlock()
 	c := q.content
 	c.tail = ((c.tail + 1) % c.mod)
 	if c.tail == c.head {
@@ -54,13 +53,14 @@ func (q *Queue) Push(item interface{}) {
 	}
 	q.len++
 	q.content.buffer[q.content.tail] = item
+	q.lock.Unlock()
 }
 
 func (q *Queue) Length() int {
-	q.lock.RLock()
-	defer q.lock.RUnlock()
-
-	return q.len
+	q.lock.Lock()
+	len := q.len
+	q.lock.Unlock()
+	return len
 }
 
 func (q *Queue) Empty() bool {
@@ -69,22 +69,23 @@ func (q *Queue) Empty() bool {
 
 func (q *Queue) Pop() (interface{}, bool) {
 	q.lock.Lock()
-	defer q.lock.Unlock()
 
 	if q.len == 0 {
 
+		q.lock.Unlock()
 		return nil, false
 	}
 	c := q.content
 	c.head = ((c.head + 1) % c.mod)
 	q.len--
+	q.lock.Unlock()
 	return c.buffer[c.head], true
 }
 
 func (q *Queue) PopMany(count int) ([]interface{}, bool) {
 	q.lock.Lock()
-	defer q.lock.Unlock()
 	if q.len == 0 {
+		q.lock.Unlock()
 		return nil, false
 	}
 	c := q.content
@@ -99,5 +100,6 @@ func (q *Queue) PopMany(count int) ([]interface{}, bool) {
 	}
 	c.head = (c.head + count) % c.mod
 	q.len -= count
+	q.lock.Unlock()
 	return buffer, true
 }
