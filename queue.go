@@ -1,21 +1,24 @@
 package goring
 
-import "sync"
+import (
+	"sync"
+	"sync/atomic"
+)
 
 type ringBuffer struct {
 	buffer []interface{}
-	head   int
-	tail   int
-	mod    int
+	head   uint64
+	tail   uint64
+	mod    uint64
 }
 
 type Queue struct {
 	content *ringBuffer
-	len     int
+	len     uint64
 	lock    sync.Mutex
 }
 
-func New(initialSize int) *Queue {
+func New(initialSize uint64) *Queue {
 	return &Queue{
 		content: &ringBuffer{
 			buffer: make([]interface{}, initialSize),
@@ -32,13 +35,13 @@ func (q *Queue) Push(item interface{}) {
 	c := q.content
 	c.tail = ((c.tail + 1) % c.mod)
 	if c.tail == c.head {
-		fillFactor := 50
+		var fillFactor uint64 = 50
 		//we need to resize
 
 		newLen := c.mod * fillFactor
 		newBuff := make([]interface{}, newLen)
 
-		for i := 0; i < c.mod; i++ {
+		for i := uint64(0); i < c.mod; i++ {
 			buffIndex := (c.tail + i) % c.mod
 			newBuff[i] = c.buffer[buffIndex]
 		}
@@ -56,11 +59,9 @@ func (q *Queue) Push(item interface{}) {
 	q.lock.Unlock()
 }
 
-func (q *Queue) Length() int {
-	q.lock.Lock()
-	len := q.len
-	q.lock.Unlock()
-	return len
+func (q *Queue) Length() uint64 {
+	res := atomic.LoadUint64(&q.len)
+	return res
 }
 
 func (q *Queue) Empty() bool {
@@ -82,7 +83,7 @@ func (q *Queue) Pop() (interface{}, bool) {
 	return c.buffer[c.head], true
 }
 
-func (q *Queue) PopMany(count int) ([]interface{}, bool) {
+func (q *Queue) PopMany(count uint64) ([]interface{}, bool) {
 	q.lock.Lock()
 	if q.len == 0 {
 		q.lock.Unlock()
@@ -95,7 +96,7 @@ func (q *Queue) PopMany(count int) ([]interface{}, bool) {
 	}
 
 	buffer := make([]interface{}, count)
-	for i := 0; i < count; i++ {
+	for i := uint64(0); i < count; i++ {
 		buffer[i] = c.buffer[(c.head+1+i)%c.mod]
 	}
 	c.head = (c.head + count) % c.mod
