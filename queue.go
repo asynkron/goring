@@ -35,7 +35,7 @@ func (q *Queue) Push(item interface{}) {
 	c := q.content
 	c.tail = ((c.tail + 1) % c.mod)
 	if c.tail == c.head {
-		var fillFactor uint64 = 50
+		var fillFactor uint64 = 10
 		//we need to resize
 
 		newLen := c.mod * fillFactor
@@ -68,27 +68,29 @@ func (q *Queue) Empty() bool {
 	return q.Length() == 0
 }
 
+//single consumer
 func (q *Queue) Pop() (interface{}, bool) {
-	q.lock.Lock()
 
-	if q.len == 0 {
-
-		q.lock.Unlock()
+	if q.Empty() {
 		return nil, false
 	}
+	q.lock.Lock()
 	c := q.content
 	c.head = ((c.head + 1) % c.mod)
 	q.len--
+	res := c.buffer[c.head]
 	q.lock.Unlock()
-	return c.buffer[c.head], true
+	return res, true
 }
 
 func (q *Queue) PopMany(count uint64) ([]interface{}, bool) {
-	q.lock.Lock()
-	if q.len == 0 {
+
+	if q.Empty() {
 		q.lock.Unlock()
 		return nil, false
 	}
+
+	q.lock.Lock()
 	c := q.content
 
 	if count >= q.len {

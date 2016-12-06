@@ -15,6 +15,16 @@ func TestPushPop(t *testing.T) {
 	assert.True(t, q.Empty())
 }
 
+func TestPushPopRepeated(t *testing.T) {
+	q := New(10)
+	for i := 0; i < 100; i++ {
+		q.Push("hello")
+		res, _ := q.Pop()
+		assert.Equal(t, "hello", res)
+		assert.True(t, q.Empty())
+	}
+}
+
 func TestPushPopMany(t *testing.T) {
 	q := New(10)
 	for i := 0; i < 10000; i++ {
