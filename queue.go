@@ -77,10 +77,10 @@ func (q *Queue) Pop() (interface{}, bool) {
 	//as we are a single consumer, no other thread can have poped the items there are guaranteed to be items now
 
 	q.lock.Lock()
-
 	c := q.content
-	c.head = ((c.head + 1) % c.mod)
-	res := c.buffer[c.head]
+	c.head++
+	//h := atomic.AddInt64(&c.head, 1)
+	res := c.buffer[c.head%c.mod]
 	q.len--
 	//atomic.AddInt64(&q.len, -1)
 	q.lock.Unlock()
@@ -90,7 +90,6 @@ func (q *Queue) Pop() (interface{}, bool) {
 func (q *Queue) PopMany(count int64) ([]interface{}, bool) {
 
 	if q.Empty() {
-		q.lock.Unlock()
 		return nil, false
 	}
 
@@ -100,13 +99,15 @@ func (q *Queue) PopMany(count int64) ([]interface{}, bool) {
 	if count >= q.len {
 		count = q.len
 	}
+	q.len -= count
 
 	buffer := make([]interface{}, count)
 	for i := int64(0); i < count; i++ {
-		buffer[i] = c.buffer[(c.head+1+i)%c.mod]
+		v := c.buffer[(c.head+1+i)%c.mod]
+		buffer[i] = v
 	}
 	c.head = (c.head + count) % c.mod
-	q.len -= count
+
 	q.lock.Unlock()
 	return buffer, true
 }
