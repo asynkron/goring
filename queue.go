@@ -7,18 +7,18 @@ import (
 
 type ringBuffer struct {
 	buffer []interface{}
-	head   uint64
-	tail   uint64
-	mod    uint64
+	head   int64
+	tail   int64
+	mod    int64
 }
 
 type Queue struct {
 	content *ringBuffer
-	len     uint64
+	len     int64
 	lock    sync.Mutex
 }
 
-func New(initialSize uint64) *Queue {
+func New(initialSize int64) *Queue {
 	return &Queue{
 		content: &ringBuffer{
 			buffer: make([]interface{}, initialSize),
@@ -35,13 +35,13 @@ func (q *Queue) Push(item interface{}) {
 	c := q.content
 	c.tail = ((c.tail + 1) % c.mod)
 	if c.tail == c.head {
-		var fillFactor uint64 = 10
+		var fillFactor int64 = 10
 		//we need to resize
 
 		newLen := c.mod * fillFactor
 		newBuff := make([]interface{}, newLen)
 
-		for i := uint64(0); i < c.mod; i++ {
+		for i := int64(0); i < c.mod; i++ {
 			buffIndex := (c.tail + i) % c.mod
 			newBuff[i] = c.buffer[buffIndex]
 		}
@@ -59,8 +59,8 @@ func (q *Queue) Push(item interface{}) {
 	q.lock.Unlock()
 }
 
-func (q *Queue) Length() uint64 {
-	res := atomic.LoadUint64(&q.len)
+func (q *Queue) Length() int64 {
+	res := atomic.LoadInt64(&q.len)
 	return res
 }
 
@@ -74,16 +74,20 @@ func (q *Queue) Pop() (interface{}, bool) {
 	if q.Empty() {
 		return nil, false
 	}
+	//as we are a single consumer, no other thread can have poped the items there are guaranteed to be items now
+
 	q.lock.Lock()
+
 	c := q.content
 	c.head = ((c.head + 1) % c.mod)
-	q.len--
 	res := c.buffer[c.head]
+	q.len--
+	//atomic.AddInt64(&q.len, -1)
 	q.lock.Unlock()
 	return res, true
 }
 
-func (q *Queue) PopMany(count uint64) ([]interface{}, bool) {
+func (q *Queue) PopMany(count int64) ([]interface{}, bool) {
 
 	if q.Empty() {
 		q.lock.Unlock()
@@ -98,7 +102,7 @@ func (q *Queue) PopMany(count uint64) ([]interface{}, bool) {
 	}
 
 	buffer := make([]interface{}, count)
-	for i := uint64(0); i < count; i++ {
+	for i := int64(0); i < count; i++ {
 		buffer[i] = c.buffer[(c.head+1+i)%c.mod]
 	}
 	c.head = (c.head + count) % c.mod
