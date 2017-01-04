@@ -49,3 +49,27 @@ func TestPushPopMany2(t *testing.T) {
 	}
 	assert.True(t, q.Empty())
 }
+func TestExpand(t *testing.T) {
+        q := New(10)
+        for i := 0; i < 90000; i++ {
+                item := fmt.Sprintf("hello%v", i)
+                q.Push(item)
+        }
+        for i := 0; i < 1000; i++ {
+                item := fmt.Sprintf("hello%v", i)
+                res, _ := q.Pop()
+                assert.Equal(t, item, res)
+        }
+        for i := 0; i < 500; i++ {
+                item := fmt.Sprintf("hello%v", i+9000)
+                q.Push(item)
+        }
+        for i := 0; i < 8500; i++ {
+                item := fmt.Sprintf("hello%v", i+1000)
+                res, _ := q.Pop()
+                assert.Equal(t, item, res)
+        }
+
+        assert.True(t, q.Empty())
+}
+
