@@ -51,25 +51,39 @@ func TestPushPopMany2(t *testing.T) {
 }
 func TestExpand(t *testing.T) {
         q := New(10)
-        for i := 0; i < 90000; i++ {
+        //expand to 100
+        for i := 0; i < 80; i++ {
                 item := fmt.Sprintf("hello%v", i)
                 q.Push(item)
         }
-        for i := 0; i < 1000; i++ {
+        //head is now at 40
+        for i := 0; i < 40; i++ {
                 item := fmt.Sprintf("hello%v", i)
                 res, _ := q.Pop()
                 assert.Equal(t, item, res)
         }
-        for i := 0; i < 500; i++ {
-                item := fmt.Sprintf("hello%v", i+9000)
+        //make sure tail wraps around => tail is at (80+50)%100=30
+        for i := 0; i < 50; i++ {
+                item := fmt.Sprintf("hello%v", i+80)
                 q.Push(item)
         }
-        for i := 0; i < 8500; i++ {
-                item := fmt.Sprintf("hello%v", i+1000)
+        //now pop enough to make the head wrap around => (40 + 80)%100=20
+        for i := 0; i < 80; i++ {
+                item := fmt.Sprintf("hello%v", i+40)
                 res, _ := q.Pop()
                 assert.Equal(t, item, res)
         }
-
+        //push enough to cause expansion
+        for i := 0; i < 100; i++ {
+                item := fmt.Sprintf("hello%v", i+130)
+                q.Push(item)
+        }
+        //empty the queue
+        for i := 0; i < 110; i++ {
+                item := fmt.Sprintf("hello%v", i+120)
+                res, _ := q.Pop()
+                assert.Equal(t, item, res)
+        }
         assert.True(t, q.Empty())
 }
 
