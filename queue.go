@@ -75,14 +75,11 @@ func (q *Queue) Pop() (interface{}, bool) {
 		return nil, false
 	}
 	//as we are a single consumer, no other thread can have poped the items there are guaranteed to be items now
-
 	q.lock.Lock()
 	c := q.content
-	c.head = ((c.head+1)%c.mod)
-	//h := atomic.AddInt64(&c.head, 1)
+	c.head = ((c.head + 1) % c.mod)
 	res := c.buffer[c.head]
 	q.len--
-	//atomic.AddInt64(&q.len, -1)
 	q.lock.Unlock()
 	return res, true
 }
